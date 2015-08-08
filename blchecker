@@ -7,6 +7,8 @@ sip=1s
 sblck=0.1s
 #Email to witch one it will send blacklisted ip
 EMAIL=""
+#Email the address that should be listed in From
+$FROM=""
 
 
 while read i;
@@ -23,7 +25,7 @@ do
     if [ ! -z "$res"  ]; then
     EMAILMESSAGE=`echo "ip $i1.$i2 blacklisted on $l list - gotten result $res"`
     if [ ! -z "$EMAIL"  ]; then #do not send email if dont want it
-	   echo $EMAILMESSAGE | mail -s "BLACKLISTED ip" "$EMAIL"
+	   echo $EMAILMESSAGE >> blacklist.txt
     fi
     echo $EMAILMESSAGE
     else
@@ -36,3 +38,13 @@ do
   done
  sleep $ssub
 done <sub
+
+if [ -f blacklist.txt ]  
+then  
+        printf "To: $EMAIL\r\nFrom: Blacklist Checker <$FROM>\r\nDate: $(date)\r\nSubject: Blacklisted IPv4s\r\n\r\nBLChecker has indicated the blow IPs are on the associated blacklists:\r\n\r\n" > temp.txt
+        cat temp.txt blacklist.txt >> mail.txt
+        printf "\r\n\r\nYour friendly blacklist checking bot" >> mail.txt
+        rm temp.txt blacklist.txt
+        cat mail.txt | msmtp $EMAIL
+        rm mail.txt
+fi
