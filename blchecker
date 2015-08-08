@@ -8,7 +8,11 @@ sblck=0.1s
 #Email to witch one it will send blacklisted ip
 EMAIL=""
 #Email the address that should be listed in From
-$FROM=""
+FROM=""
+#Subject of email
+SUBJECT=""
+#method mail or msmtp
+METHOD="msmtp"
 
 
 while read i;
@@ -41,10 +45,14 @@ done <sub
 
 if [ -f blacklist.txt ]  
 then  
-        printf "To: $EMAIL\r\nFrom: Blacklist Checker <$FROM>\r\nDate: $(date)\r\nSubject: Blacklisted IPv4s\r\n\r\nBLChecker has indicated the blow IPs are on the associated blacklists:\r\n\r\n" > temp.txt
+        printf "To: $EMAIL\r\nFrom: Blacklist Checker <$FROM>\r\nDate: $(date)\r\nSubject: $SUBJECT\r\n\r\nBLChecker has indicated the blow IPs are on the associated blacklists:\r\n\r\n" > temp.txt
         cat temp.txt blacklist.txt >> mail.txt
         printf "\r\n\r\nYour friendly blacklist checking bot" >> mail.txt
         rm temp.txt blacklist.txt
-        cat mail.txt | msmtp $EMAIL
+        if [ $METHOD = "mail" ]; then
+        	cat mail.txt | mail -s "$SUBJECT" $EMAIL
+        else
+        	cat mail.txt | msmtp $EMAIL
+        fi
         rm mail.txt
 fi
