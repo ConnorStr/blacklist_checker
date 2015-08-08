@@ -6,6 +6,8 @@ You can use msmtp (which is used by default) or also sendmail. Or you could modi
 
 HeavyMetal has also helped contribute to these changes.
 
+I suggest running this in a cron job at least monthly.
+
 =================
 Original Readme
 =================
