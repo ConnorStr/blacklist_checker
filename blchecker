@@ -1,58 +1,88 @@
 #!/bin/bash
-#sleep between subnets
-ssub=10s
-#sleep between each ip is checked
-sip=1s
-#sleep between each blacklist check
-sblck=0.1s
-#Email to witch one it will send blacklisted ip
-EMAIL=""
-#Email the address that should be listed in From
-FROM=""
-#Subject of email
-SUBJECT=""
-#method mail or msmtp
-METHOD="msmtp"
+
+LOCATION="/blacklist_checker" # Directory location (do not include trailing /)
+EMAIL="" # Email address to send reports to (leave empty to disable mailing function)
+FROM="" # Email address to send reports from
+SUBJECT="IPv4 Blacklist Report" # Email subject
+METHOD="msmtp" # Method to send email msmtp or mail
+FILE="" # set to true to log to a dated file (empty disables)
+ssub=10s # Sleep between subnets, default of "10s" should be fine
+sip=1s # Sleep between each IP address, default of "1s" should be fine
+sblck=0.1s # Sleep between each blacklist check, default of "0.1s" should be fine
 
 
-while read i;
-do
-  i1=`echo $i | awk '{print $1}'`
-  i2=`echo $i | awk '{print $2}'`
-  i3=`echo $i | awk '{print $3}'`
-  while [[ $i2 -le $i3 ]]
-  do
-  ip=`echo $i1.$i2 |awk -F"." '{for(i=NF;i>0;i--) printf i!=1?$i".":"%s",$i}'`
-   for l in $(cat list)
-   do
-    res=`dig +short $ip.$l | grep -Eo '[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}' | grep 127.0.*`
-    if [ ! -z "$res"  ]; then
-    EMAILMESSAGE=`echo "ip $i1.$i2 blacklisted on $l list - gotten result $res"`
-    if [ ! -z "$EMAIL"  ]; then #do not send email if dont want it
-	   echo $EMAILMESSAGE >> blacklist.txt
-    fi
-    echo $EMAILMESSAGE
-    else
-    echo "ip $i1.$i2 not blacklisted on $l list - gotten result $res"
-    fi
-    sleep $sblck
-   done
-  ((i2 = i2 + 1))
-   sleep $sip
-  done
- sleep $ssub
-done <sub
+if [ ! -z "$FILE" ]; then
+    LOGDATE=$(date +"%m-%d-%Y_%T")
+    LOGFILE="$LOCATION/bllog_$LOGDATE.log"
+    exec 3>&1 1>>${LOGFILE} 2>&1
+else
+  printf "LOG: File logging disabled.\r\n"
+fi
 
-if [ -f blacklist.txt ]  
-then  
-        printf "To: $EMAIL\r\nFrom: Blacklist Checker <$FROM>\r\nDate: $(date)\r\nSubject: $SUBJECT\r\n\r\nBLChecker has indicated the below IPs are on the associated blacklists:\r\n\r\n" > temp.txt
-        cat temp.txt blacklist.txt >> mail.txt
-        printf "\r\n\r\nYour friendly blacklist checking bot" >> mail.txt
-        rm temp.txt blacklist.txt
+if [ ! -z "$LOCATION" ]; then
+    while read i;
+    do
+        i1=`echo $i | awk '{print $1}'`
+        i2=`echo $i | awk '{print $2}'`
+        i3=`echo $i | awk '{print $3}'`
+        while [[ $i2 -le $i3 ]]
+        do
+            ip=`echo $i1.$i2 |awk -F"." '{for(i=NF;i>0;i--) printf i!=1?$i".":"%s",$i}'`
+            for l in $(cat $LOCATION/list)
+            do
+                res=`dig +short $ip.$l | grep -Eo '[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}' | grep 127.0.*`
+                if [ ! -z "$res" ]; then
+                    EMAILMESSAGE=`echo "ip $i1.$i2 blacklisted on $l list - gotten result $res"`
+                    if [ ! -z "$EMAIL"  ]; then #do not send email if dont want it
+                        echo $EMAILMESSAGE >> $LOCATION/blacklist.txt
+                    fi
+                    if [ ! -z "$FILE" ]; then
+                        echo $EMAILMESSAGE | tee /dev/fd/3
+                    else
+                        echo $EMAILMESSAGE
+                    fi
+                else
+                    if [ ! -z "$FILE" ]; then
+                        echo "ip $i1.$i2 not blacklisted on $l list - gotten result $res" | tee /dev/fd/3
+                    else
+                        echo "ip $i1.$i2 not blacklisted on $l list - gotten result $res"
+                    fi
+                fi
+                sleep $sblck
+            done
+            ((i2 = i2 + 1))
+            sleep $sip
+        done
+        sleep $ssub
+    done <$LOCATION/sub
+
+    if [ -f $LOCATION/blacklist.txt ]; then
+        printf "To: $EMAIL\r\nFrom: Blacklist Checker <$FROM>\r\nDate: $(date)\r\nSubject: $SUBJECT\r\n\r\nBLChecker has indicated the below IPs are on the associated blacklists:\r\n\r\n" > $LOCATION/temp.txt
+        cat $LOCATION/temp.txt $LOCATION/blacklist.txt >> $LOCATION/mail.txt
+        printf "\r\nYour friendly blacklist checking bot" >> $LOCATION/mail.txt
+        rm $LOCATION/temp.txt $LOCATION/blacklist.txt
         if [ $METHOD = "mail" ]; then
-        	cat mail.txt | mail -s "$SUBJECT" $EMAIL
+            cat $LOCATION/mail.txt | mail -s "$SUBJECT" $EMAIL
         else
-        	cat mail.txt | msmtp $EMAIL
+            cat $LOCATION/mail.txt | msmtp $EMAIL
         fi
-        rm mail.txt
+        if [ ! -z "$FILE" ]; then
+            printf "$SUBJECT was sent successfully.\r\n" | tee /dev/fd/3
+        else
+            printf "$SUBJECT was sent successfully.\r\n"
+        fi
+        rm $LOCATION/mail.txt
+    else
+        if [ ! -z "$FILE" ]; then
+            printf "LOG: mailing is disabled.\r\n" | tee /dev/fd/3
+        else
+            printf "LOG: mailing is disabled.\r\n"
+        fi
+    fi
+else
+    if [ ! -z "$FILE" ]; then
+        printf "ATTENTION: You must set the LOCATION variable.\r\n" | tee /dev/fd/3
+    else
+        printf "ATTENTION: You must set the LOCATION variable.\r\n"
+    fi
 fi
