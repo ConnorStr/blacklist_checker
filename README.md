@@ -1,6 +1,12 @@
 blacklist_checker
 =================
+ConnorStr Changes
 
+You can use msmtp (which is used by default) or also sendmail. Or you could modify it to use any other mailing options.
+
+=================
+Original Readme
+=================
 simple bash script to check or subnets are blacklisted made by www.vpsnet.lt
 
 this simple script can check subnets (from file sub) or they are blacklisted in an blacklist (from file list)
