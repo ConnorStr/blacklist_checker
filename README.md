@@ -4,6 +4,8 @@ ConnorStr Changes
 
 You can use msmtp (which is used by default) or also sendmail. Or you could modify it to use any other mailing options.
 
+HeavyMetal has also helped contribute to these changes.
+
 =================
 Original Readme
 =================
