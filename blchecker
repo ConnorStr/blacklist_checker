@@ -10,7 +10,6 @@ ssub=10s # Sleep between subnets, default of "10s" should be fine
 sip=1s # Sleep between each IP address, default of "1s" should be fine
 sblck=0.1s # Sleep between each blacklist check, default of "0.1s" should be fine
 
-
 if [ ! -z "$FILE" ]; then
     LOGDATE=$(date +"%m-%d-%Y_%T")
     LOGFILE="$LOCATION/bllog_$LOGDATE.log"
