@@ -5,18 +5,9 @@ EMAIL="" # Email address to send reports to (leave empty to disable mailing func
 FROM="" # Email address to send reports from
 SUBJECT="IPv4 Blacklist Report" # Email subject
 METHOD="msmtp" # Method to send email msmtp or mail
-FILE="" # set to true to log to a dated file (empty disables)
 ssub=10s # Sleep between subnets, default of "10s" should be fine
 sip=1s # Sleep between each IP address, default of "1s" should be fine
 sblck=0.1s # Sleep between each blacklist check, default of "0.1s" should be fine
-
-if [ ! -z "$FILE" ]; then
-    LOGDATE=$(date +"%m-%d-%Y_%T")
-    LOGFILE="$LOCATION/bllog_$LOGDATE.log"
-    exec 3>&1 1>>${LOGFILE} 2>&1
-else
-  printf "LOG: File logging disabled.\r\n"
-fi
 
 if [ ! -z "$LOCATION" ]; then
     while read i;
@@ -35,17 +26,9 @@ if [ ! -z "$LOCATION" ]; then
                     if [ ! -z "$EMAIL"  ]; then #do not send email if dont want it
                         echo $EMAILMESSAGE >> $LOCATION/blacklist.txt
                     fi
-                    if [ ! -z "$FILE" ]; then
-                        echo $EMAILMESSAGE | tee /dev/fd/3
-                    else
-                        echo $EMAILMESSAGE
-                    fi
+                    echo $EMAILMESSAGE
                 else
-                    if [ ! -z "$FILE" ]; then
-                        echo "ip $i1.$i2 not blacklisted on $l list - gotten result $res" | tee /dev/fd/3
-                    else
-                        echo "ip $i1.$i2 not blacklisted on $l list - gotten result $res"
-                    fi
+                    echo "ip $i1.$i2 not blacklisted on $l list - gotten result $res"
                 fi
                 sleep $sblck
             done
@@ -65,23 +48,11 @@ if [ ! -z "$LOCATION" ]; then
         else
             cat $LOCATION/mail.txt | msmtp $EMAIL
         fi
-        if [ ! -z "$FILE" ]; then
-            printf "$SUBJECT was sent successfully.\r\n" | tee /dev/fd/3
-        else
-            printf "$SUBJECT was sent successfully.\r\n"
-        fi
+        printf "$SUBJECT was sent successfully.\r\n"
         rm $LOCATION/mail.txt
     else
-        if [ ! -z "$FILE" ]; then
-            printf "LOG: mailing is disabled.\r\n" | tee /dev/fd/3
-        else
-            printf "LOG: mailing is disabled.\r\n"
-        fi
+        printf "LOG: mailing is disabled.\r\n"
     fi
 else
-    if [ ! -z "$FILE" ]; then
-        printf "ATTENTION: You must set the LOCATION variable.\r\n" | tee /dev/fd/3
-    else
-        printf "ATTENTION: You must set the LOCATION variable.\r\n"
-    fi
+    printf "ATTENTION: You must set the LOCATION variable.\r\n"
 fi
