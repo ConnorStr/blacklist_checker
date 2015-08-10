@@ -4,6 +4,7 @@ LOCATION="/blacklist_checker" # Directory location (do not include trailing /)
 EMAIL="" # Email address to send reports to (leave empty to disable mailing function)
 FROM="" # Email address to send reports from
 SUBJECT="IPv4 Blacklist Report" # Email subject
+SUCCESS="" # Set to true to get a success email saying no IPs are blacklisted
 METHOD="msmtp" # Method to send email msmtp or mail
 ssub=10s # Sleep between subnets, default of "10s" should be fine
 sip=1s # Sleep between each IP address, default of "1s" should be fine
@@ -51,7 +52,19 @@ if [ ! -z "$LOCATION" ]; then
         printf "$SUBJECT was sent successfully.\r\n"
         rm $LOCATION/mail.txt
     else
-        printf "LOG: mailing is disabled.\r\n"
+        if [ ! -z "$SUCCESS" ]; then
+            printf "LOG: no ip's blacklisted\r\n"
+            printf "To: $EMAIL\r\nFrom: Blacklist Checker <$FROM>\r\nDate: $(date)\r\nSubject: $SUBJECT\r\n\r\nBLChecker has indicated there are no IPs listed in any blacklists checked.\r\n\r\nYour friendly blacklist checking bot" >> $LOCATION/mail.txt
+            if [ $METHOD = "mail" ]; then
+                cat $LOCATION/mail.txt | mail -s "$SUBJECT" $EMAIL
+            else
+                cat $LOCATION/mail.txt | msmtp $EMAIL
+            fi
+            printf "$SUBJECT was sent successfully.\r\n"
+            rm $LOCATION/mail.txt
+        else
+            printf "LOG: no ip's blacklisted or mailing disabled.\r\n"
+        fi
     fi
 else
     printf "ATTENTION: You must set the LOCATION variable.\r\n"
